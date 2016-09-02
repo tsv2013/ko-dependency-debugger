@@ -1,43 +1,48 @@
-function getStack(cutCount = 4) {
+function getStack(cutCount) {
   var stack = [];
-	try {
-		throw Error("stack");
+  cutCount = cutCount || 4;
+  try {
+    throw Error("stack");
   }
   catch(e) {
-  	stack = e.stack.split("\n").splice(cutCount).map(s => s.trim(" "));
+    stack = e.stack.split("\n").splice(cutCount).map(s => s.trim(" "));
   }
   return stack;
 }
 
-var originalComputed = ko.computed;
-ko.computed = (...args) => {
-  var result = originalComputed.apply(originalComputed, args);
-  result.__debugCreatedStack = getStack();
-	return result;
-}
-
 var originalObservable = ko.observable;
-ko.observable = (...args) => {
+var newObservable = (...args) => {
   var result = originalObservable.apply(originalObservable, args);
   result.__debugCreatedStack = getStack();
-	return result;
+  result['__ko_proto__'] = newObservable;
+  return result;
 }
+ko.observable = newObservable;
+
+var originalComputed = ko.computed;
+var newComputed = (...args) => {
+  var result = originalComputed.apply(originalComputed, args);
+  result.__debugCreatedStack = getStack();
+  result['__ko_proto__'] = newObservable;
+  return result;
+}
+ko.computed = newComputed;
 
 var outerFrames = [], currentFrame;
 var originalDdBegin = ko.dependencyDetection.begin;
 ko.dependencyDetection.begin = options => {
   outerFrames.push(currentFrame);
   currentFrame = options;
-	if(options) {
+  if(options) {
     options.computed.__PreviousDebugDependencies = options.computed.__DebugDependencies;
-  	options.computed.__DebugDependencies = [];
+    options.computed.__DebugDependencies = [];
   }
-	originalDdBegin.apply(originalDdBegin, [options]);
+  originalDdBegin.apply(originalDdBegin, [options]);
 }
 var originalDdEnd = ko.dependencyDetection.end;
 ko.dependencyDetection.end = () => {
   currentFrame = outerFrames.pop();
-	originalDdEnd.apply(originalDdEnd, []);
+  originalDdEnd.apply(originalDdEnd, []);
 }
 var originalDdRegisterDependency = ko.dependencyDetection.registerDependency;
 ko.dependencyDetection.registerDependency = (...args) => {
@@ -46,9 +51,9 @@ ko.dependencyDetection.registerDependency = (...args) => {
       object: args[0],
       stack: !!args[0] && getStack(5)
     }
-  	currentFrame.computed.__DebugDependencies.push(dependency);
+    currentFrame.computed.__DebugDependencies.push(dependency);
   }
-	originalDdRegisterDependency.apply(originalDdRegisterDependency, args);
+  originalDdRegisterDependency.apply(originalDdRegisterDependency, args);
 }
 
 var o1 = ko.observable(1);
