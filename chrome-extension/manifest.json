@@ -1,0 +1,12 @@
+{
+  "name": "Knockoutjs dependencies debugger",
+  "version": "0.0.1",
+  "description": "Shows observables/komputeds this ko.computed is subscribed to on it's change.",
+  "devtools_page": "pages/devtools.html",
+  "permissions": ["tabs"],
+   "background": {
+    "scripts": ["background.js"]
+  },
+  "manifest_version": 2,
+  "options_page": "pages/options.html"
+}
